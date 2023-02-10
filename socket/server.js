@@ -1,11 +1,29 @@
 var SerialPort = require('serialport');
 var xbee_api = require('xbee-api');
+
 var C = xbee_api.constants;
 //var storage = require("./storage")
 require('dotenv').config()
 
 
 const SERIAL_PORT = process.env.SERIAL_PORT;
+
+const mqtt = require('mqtt')
+const client  = mqtt.connect('mqtt://test.mosquitto.org')
+
+client.on('connect', function () {
+  client.subscribe('groupe1', function (err) {
+    // if (!err) {
+    //   client.publish('groupe1', 'Hello mqtt')
+    // }
+  })
+})
+
+client.on('message', function (topic, message) {
+  // message is Buffer
+  console.log(topic, message.toString())
+  //client.end()
+})
 
 var xbeeAPI = new xbee_api.XBeeAPI({
   api_mode: 2
@@ -39,6 +57,14 @@ serialport.on("open", function () {
   };
   xbeeAPI.builder.write(frame_obj);
 
+  frame_obj = { // AT Request to be sent
+    type: C.FRAME_TYPE.REMOTE_AT_COMMAND_REQUEST,
+    destination64: "0013a20041c34afb",
+    command: "NI",
+    commandParameter: ["SUUWI"],
+  };
+  xbeeAPI.builder.write(frame_obj);
+
 });
 
 // All frames parsed by the XBee will be emitted here
@@ -66,15 +92,19 @@ xbeeAPI.parser.on("data", function (frame) {
   } else if (C.FRAME_TYPE.ZIGBEE_IO_DATA_SAMPLE_RX === frame.type) {
 
     console.log("ZIGBEE_IO_DATA_SAMPLE_RX")
-    console.log(frame.analogSamples.AD0)
+    //console.log(frame.analogSamples.AD0)
     //storage.registerSample(frame.remote64,frame.analogSamples.AD0 )
-
+    console.log(frame.digitalSamples)
   } else if (C.FRAME_TYPE.REMOTE_COMMAND_RESPONSE === frame.type) {
+
     console.log("REMOTE_COMMAND_RESPONSE")
-  } else {
+  } else if (frame.type == C.FRAME_TYPE.REMOTE_AT_COMMAND_REQUEST){
+    console.log("Allumer")
+  }else {
     console.debug(frame);
     let dataReceived = String.fromCharCode.apply(null, frame.commandData)
     console.log(dataReceived);
-  }
+  } 
+  
 
 });
