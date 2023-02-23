@@ -2,80 +2,98 @@ package com.example.iot;
 
 import android.os.Bundle;
 import android.util.Log;
+import android.widget.Button;
+import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
 
-import org.eclipse.paho.android.service.MqttAndroidClient;
-import org.eclipse.paho.client.mqttv3.IMqttActionListener;
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
-import org.eclipse.paho.client.mqttv3.IMqttToken;
-import org.eclipse.paho.client.mqttv3.MqttAsyncClient;
 import org.eclipse.paho.client.mqttv3.MqttCallbackExtended;
-import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
-import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
-import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 
 public class MainActivity extends AppCompatActivity {
 
-    private MqttAndroidClient mqttAndroidClient;
-    private String brokerUrl = "mqtt://test.mosquitto.org:1883";
-    private String clientId = MqttAsyncClient.generateClientId();
+    private static final String TAG = "MainActivity"; //!< le TAG de la classe pour les logs
+    ClientMQTT clientMQTT = null;
+    TextView bienvenue;
+    TextView credit;
+    Button ouvrir;
+    Button ferme;
+    Client[] list_client = new Client[10];
+    int id_client;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        list_client[0] = new Client("Julien", "1234", 10);
+        list_client[1] = new Client("Vincent", "2431", 10);
+        list_client[2] = new Client("Andrya", "2341", 10);
 
-        // Initialise MQTT client
-        mqttAndroidClient = new MqttAndroidClient(this.getApplicationContext(), brokerUrl, clientId);
-        mqttAndroidClient.setCallback(new MqttCallbackExtended() {
-            @Override
-            public void connectComplete(boolean reconnect, String serverURI) {
-                if (reconnect) {
-                    // Re-subscribe to topics if connection is lost and then re-established
-                    Log.d("MQTT", "Reconnected to : " + serverURI);
-                } else {
-                    Log.d("MQTT", "Connected to: " + serverURI);
-                }
-            }
+        bienvenue = findViewById(R.id.bienvenue);
+        credit = findViewById(R.id.credit);
+        ouvrir = findViewById(R.id.ouvrir);
+        ferme = findViewById(R.id.ferme);
 
-            @Override
-            public void connectionLost(Throwable cause) {
-                Log.d("MQTT", "Connection lost");
-            }
+        clientMQTT = new ClientMQTT(getApplicationContext());
 
-            @Override
-            public void messageArrived(String topic, MqttMessage message) throws Exception {
-                // Handle incoming messages
-            }
+        demarrerMQTT();
 
-            @Override
-            public void deliveryComplete(IMqttDeliveryToken token) {
-                // Handle message delivery
-            }
+        ouvrir.setOnClickListener(view -> {
+            clientMQTT.publishMessage("Ouvrir");
+            list_client[id_client].setCredit(list_client[id_client].getCredit()-1);
         });
 
-        // Set connection options
-        MqttConnectOptions options = new MqttConnectOptions();
-        options.setCleanSession(true);
+        ferme.setOnClickListener(view -> {
+            clientMQTT.publishMessage("Fermer");
+        });
+    }
 
-        // Connect to the broker
-        try {
-            IMqttToken token = mqttAndroidClient.connect(options);
-            token.setActionCallback(new IMqttActionListener() {
-                @Override
-                public void onSuccess(IMqttToken asyncActionToken) {
-                    Log.d("MQTT", "Connection success");
-                }
+    private void demarrerMQTT()
+    {
+        clientMQTT.reconnecter();
 
-                @Override
-                public void onFailure(IMqttToken asyncActionToken, Throwable exception) {
-                    Log.d("MQTT", "Connection failure");
+        clientMQTT.mqttAndroidClient.setCallback(new MqttCallbackExtended()
+        {
+            @Override
+            public void connectComplete(boolean b, String s)
+            {
+                Log.w(TAG,"connectComplete");
+            }
+
+            @Override
+            public void connectionLost(Throwable throwable)
+            {
+                Log.w(TAG,"connectionLost");
+            }
+
+            @Override
+            public void messageArrived(String topic, MqttMessage mqttMessage) throws Exception
+            {
+                Log.w(TAG, "messageArrived : " + mqttMessage.toString());
+                if(!connexion(mqttMessage.toString())){
+                    bienvenue.setText("Mauvais code");
                 }
-            });
-        } catch (MqttException e) {
-            e.printStackTrace();
+                //bienvenue.setText(mqttMessage.toString());
+            }
+
+            @Override
+            public void deliveryComplete(IMqttDeliveryToken iMqttDeliveryToken)
+            {
+                Log.w(TAG, "deliveryComplete");
+            }
+        });
+    }
+
+    private boolean connexion(String input){
+        boolean client_existe = false;
+        for(int i = 0; i < list_client.length; i++){
+            if(list_client[i].code.equals(input)){
+                client_existe = true;
+                bienvenue.setText("Bienvenue " + list_client[i].getNom());
+                id_client = i;
+            }
         }
+        return client_existe;
     }
 }
