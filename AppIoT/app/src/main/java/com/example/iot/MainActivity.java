@@ -2,6 +2,7 @@ package com.example.iot;
 
 import android.os.Bundle;
 import android.util.Log;
+import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 
@@ -20,7 +21,7 @@ public class MainActivity extends AppCompatActivity {
     Button ouvrir;
     Button ferme;
     Client[] list_client = new Client[10];
-    int id_client;
+    int id_client = 1000;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -39,6 +40,7 @@ public class MainActivity extends AppCompatActivity {
 
         demarrerMQTT();
 
+        //connexion("1234");
         ouvrir.setOnClickListener(view -> {
             clientMQTT.publishMessage("Ouvrir");
             list_client[id_client].setCredit(list_client[id_client].getCredit()-1);
@@ -46,6 +48,11 @@ public class MainActivity extends AppCompatActivity {
 
         ferme.setOnClickListener(view -> {
             clientMQTT.publishMessage("Fermer");
+            id_client = 1000;
+            ouvrir.setVisibility(View.INVISIBLE);
+            ferme.setVisibility(View.INVISIBLE);
+            bienvenue.setText("Bienvenue");
+            credit.setText("");
         });
     }
 
@@ -88,10 +95,16 @@ public class MainActivity extends AppCompatActivity {
     private boolean connexion(String input){
         boolean client_existe = false;
         for(int i = 0; i < list_client.length; i++){
-            if(list_client[i].code.equals(input)){
+            Client c = list_client[i];
+            String code = c.getCode();
+            if(code.equals(input)){
                 client_existe = true;
-                bienvenue.setText("Bienvenue " + list_client[i].getNom());
+                bienvenue.setText("Bienvenue " + c.getNom());
+                credit.setText("Crédit restant : " + String.valueOf(c.getCredit()));
                 id_client = i;
+                ouvrir.setVisibility(View.VISIBLE);
+                ferme.setVisibility(View.VISIBLE);
+                break;
             }
         }
         return client_existe;

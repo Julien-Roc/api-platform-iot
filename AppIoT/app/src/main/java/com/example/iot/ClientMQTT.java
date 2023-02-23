@@ -20,7 +20,7 @@ public class ClientMQTT {
     public MqttAndroidClient mqttAndroidClient = null;
     String serverUri = "tcp://broker.hivemq.com:1883";
     int portTTN = 1883;
-    String clientId = "mqtt_dg4h6wd4g6db64b64nb65bwf5q4651";
+    String clientId = "";
     String subscriptionTopic = "groupe1";
     String publishTopic = "groupe1";
     String username = "appli";
